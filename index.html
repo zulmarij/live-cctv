@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Live CCTV Bekasi</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+    }
+    video {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" controls autoplay muted></video>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById("video");
+    const videoUrl = "https://eofficev2.bekasikota.go.id/backupcctv/m3/Perempatan_Caman.m3u8";
+
+    let hls;
+
+    function startStream() {
+      if (hls) {
+        hls.destroy();
+      }
+
+      hls = new Hls();
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.warn("HLS error", data);
+
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.warn("Network error — reloading stream...");
+              retryStream();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn("Media error — attempting recovery...");
+              hls.recoverMediaError();
+              break;
+            default:
+              console.warn("Other fatal error — reloading...");
+              retryStream();
+              break;
+          }
+        }
+      });
+    }
+
+    function retryStream() {
+      setTimeout(() => {
+        startStream();
+      }, 5000); // coba lagi setelah 5 detik
+    }
+
+    if (Hls.isSupported()) {
+      startStream();
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = videoUrl;
+      video.addEventListener("error", () => {
+        console.warn("Native HLS error — retrying...");
+        setTimeout(() => (video.src = videoUrl), 5000);
+      });
+    }
+  </script>
+</body>
+</html>
